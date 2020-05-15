@@ -9,7 +9,7 @@ import Split
 -- separating connectives
 
 data Star : {a : Type} -> Pred (List a) -> Pred (List a) -> Pred (List a) where
-  MkStar : {L, R : List a} -> (px : p L) -> (split : Split g L R) -> (qx : q R) -> Star p q g
+  MkStar : {l, r : List a} -> p l -> Split g l r -> q r -> Star p q g
 
 infixr 5 ^*^
 
