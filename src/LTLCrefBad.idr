@@ -7,7 +7,7 @@ import LTy
 %default total
 %access public export
 
-data Term : List Ty -> Ty -> Type where
+data Term : Ctx -> Ty -> Type where
   Var  : Term [a] a
   Lam  : Term (a::g) b -> Term g (a~@b)
   App  : Split g l r -> Term l (a~@b) -> Term r a -> Term g b
@@ -20,7 +20,7 @@ data Term : List Ty -> Ty -> Type where
   Del  : Term g (R U) -> Term g U
 
 mutual
-  data All : List Ty -> ST -> Type where
+  data All : Ctx -> ST -> Type where
     Nil  : All [] []
     Cons : Split g l r -> Val l a -> All d r -> All (a::d) g
 

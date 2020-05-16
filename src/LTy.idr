@@ -12,5 +12,8 @@ infixr 5 ~@
 (~@) : Ty -> Ty -> Ty
 (~@) = Imp
 
+Ctx : Type
+Ctx = List Ty
+
 ST : Type
 ST = List Ty

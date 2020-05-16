@@ -25,6 +25,3 @@ turn f pb = pb . f
 
 data One : a -> Pred (List a) where
   MkOne : One x [x]
-
-data Emp : Pred (List a) where
-  MkEmp : Emp []

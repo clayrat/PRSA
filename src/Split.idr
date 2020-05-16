@@ -16,6 +16,18 @@ splitRight : Split l [] l
 splitRight {l=[]}   = Nil
 splitRight {l=_::_} = ConsR splitRight
 
+splitComm : Split x l r -> Split x r l
+splitComm  Nil      = Nil
+splitComm (ConsR s) = ConsL $ splitComm s
+splitComm (ConsL s) = ConsR $ splitComm s
+
+splitRInv : Split g [] d -> g = d
+splitRInv  Nil      = Refl
+splitRInv (ConsR s) = cong $ splitRInv s
+
+splitLInv : Split g d [] -> g = d
+splitLInv = splitRInv . splitComm
+
 splitLen : Split l ll lr -> length l = length ll + length lr
 splitLen                  Nil      = Refl
 splitLen {ll} {lr=_::rs} (ConsR s) =
