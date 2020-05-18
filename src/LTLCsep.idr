@@ -36,9 +36,27 @@ mutual
     VClos : Term b (a::g) -> All (Env g :-> Val (a ~@ b))
     VPair : All $ Val a ^*^ Val b :-> Val (Prod a b)
 
-ReaderT : Ctx -> Ctx -> Pred ST -> Pred ST
-ReaderT g1 g2 p = Env g1 ~* Env g2 ^*^ p
+Reader : Ctx -> Ctx -> Pred ST -> Pred ST
+Reader g1 g2 p = Env g1 ~* Env g2 ^*^ p
 
-ask : eps $ ReaderT g [] (Env g)
+ask : eps $ Reader g [] (Env g)
 ask sp as with (splitRInv sp)
   | Refl = MkStar Nil sp as
+
+prepend : All (Env g1 :-> Reader g2 (g1++g2) Emp)
+prepend e1 = \sp, e2 => MkStar (concat $ MkStar e1 sp e2) splitLeft MkEmp
+
+append : All (Env g1 :-> Reader g2 (g2++g1) Emp)
+append e1 = \sp, e2 => MkStar (concat $ starComm $ MkStar e1 sp e2) splitLeft MkEmp
+
+pure : All $ p :-> Reader g g p
+pure px = \sp, as => MkStar as (splitComm sp) px
+
+bind : All $ (p ~* Reader g2 g3 q) :-> (Reader g1 g2 p ~* Reader g1 g3 q)
+bind f = \sp1, rd, sp2, env =>
+  let
+    (_ ** (sp3, sp4)) = splitAssoc sp1 sp2
+    MkStar env2 sp5 pr = rd sp4 env
+    (_ ** (sp6, sp7)) = splitUnassoc sp3 (splitComm sp5)
+   in
+  f sp6 pr sp7 env2
