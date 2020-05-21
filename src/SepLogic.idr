@@ -17,21 +17,68 @@ infixr 9 ^*^
 (^*^) : Pred (List a) -> Pred (List a) -> Pred (List a)
 (^*^) = Star
 
+-- (Emp, ^*^) is a commutative monoid
+
+starAssoc : All $ (p ^*^ q) ^*^ r :-> p ^*^ (q ^*^ r)
+starAssoc (MkStar (MkStar pl l_m qm) lm_r rr) =
+  let (_ ** (l_mr, m_r)) = splitAssoc l_m lm_r in
+  MkStar pl l_mr (MkStar qm m_r rr)
+
+starUnassoc : All $ p ^*^ (q ^*^ r) :-> (p ^*^ q) ^*^ r
+starUnassoc (MkStar pl l_mr (MkStar qm m_r rr)) =
+  let (_ ** (l_m, lm_r)) = splitUnassoc l_mr m_r in
+  MkStar (MkStar pl l_m qm) lm_r rr
+
+starEmp : All $ p ^*^ Emp :-> p
+starEmp (MkStar pl sp MkEmp) = rewrite splitLInv sp in pl
+
+empStar : All $ p :-> p ^*^ Emp
+empStar px = MkStar px splitLeft MkEmp
+
+starComm : All $ p ^*^ q :-> q ^*^ p
+starComm (MkStar pl sp qr) = MkStar qr (splitComm sp) pl
+
+-- misc properites
+
+starMono : All (p :-> q) -> All (p ^*^ r :-> q ^*^ r)
+starMono pq (MkStar pl sp rr) = MkStar (pq pl) sp rr
+
 infixr 8 ~*
 
 (~*) : Pred (List a) -> Pred (List a) -> Pred (List a)
 (~*) {a} p q l = {g, r : List a} -> Split g l r -> p r -> q g
 
--- * is adjoint to -*
+-- wand properites
 
-uncurryS : All (p ^*^ q :-> r) -> All (p :-> q ~* r)
-uncurryS f pl = \sp, qr => f $ MkStar pl sp qr
+wandIntro : All (p ^*^ q :-> r) -> All (p :-> q ~* r)
+wandIntro f pl = \sp, qr => f $ MkStar pl sp qr
 
-curryS : All (p :-> q ~* r) -> All (p ^*^ q :-> r)
-curryS f (MkStar pl sp qr) = f pl sp qr
+wandCancel0 : All (p :-> q ~* r) -> All (p ^*^ q :-> r)
+wandCancel0 f (MkStar pl sp qr) = f pl sp qr
 
-starComm : All $ p ^*^ q :-> q ^*^ p
-starComm (MkStar pl sp qr) = MkStar qr (splitComm sp) pl
+wandCancel : All $ p ^*^ (p ~* q) :-> q
+wandCancel (MkStar pl sp wr) = wr (splitComm sp) pl
+
+wandMono : All (p :-> q) -> All (r :-> s) -> All (q ~* r :-> p ~* s)
+wandMono pq rs wqr = \sp, pr => rs $ wqr sp (pq pr)
+
+wandSelf : All $ Emp :-> p ~* p
+wandSelf MkEmp = \sp, pr => rewrite splitRInv sp in pr
+
+curryW : All $ (p ^*^ q) ~* r :-> p ~* (q ~* r)
+curryW wpq_r = \sp1, pm, sp2, qr =>
+  let (_ ** (sp3, sp4)) = splitAssoc sp1 sp2 in
+  wpq_r sp3 (MkStar pm sp4 qr)
+
+uncurryW : All $ p ~* (q ~* r) :-> (p ^*^ q) ~* r
+uncurryW wpqr = \sp1, (MkStar pl sp2 qr) =>
+  let (_ ** (sp3, sp4)) = splitUnassoc sp1 sp2 in
+  wpqr sp3 pl sp4 qr
+
+wandStar : All $ (p ~* q) ^*^ r :-> p ~* (q ^*^ r)
+wandStar (MkStar pql sp1 rr) = \sp2, pr =>
+  let (_ ** (sp3, sp4)) = splitUnassoc (splitComm sp2) sp1 in
+  MkStar (pql (splitComm sp3) pr) sp4 rr
 
 -- Inductive separating forall over a list
 data AllStar : {a, b : Type} -> (a -> Pred b) -> List a -> Pred b where
