@@ -17,11 +17,11 @@ data Union : Pred a -> Pred a -> Pred a where
   Inj1 : All (p :-> Union p q)
   Inj2 : All (q :-> Union p q)
 
-eps : Pred (List a) -> Type
-eps p = p []
-
 turn : (a -> b) -> Pred b -> Pred a
 turn f pb = pb . f
+
+eps : Pred (List a) -> Type
+eps p = p []
 
 data One : a -> Pred (List a) where
   MkOne : One x [x]

@@ -43,50 +43,61 @@ starComm (MkStar pl sp qr) = MkStar qr (splitComm sp) pl
 starMono : All (p :-> q) -> All (p ^*^ r :-> q ^*^ r)
 starMono pq (MkStar pl sp rr) = MkStar (pq pl) sp rr
 
+data Wand : Pred (List a) -> Pred (List a) -> Pred (List a) where
+  MkWand : ({g, r : List a} -> Split g l r -> p r -> q g) -> Wand p q l
+
+app : Wand p q l -> {g, r : List a} -> Split g l r -> p r -> q g
+app (MkWand f) = f
+
 infixr 8 ~*
 
 (~*) : Pred (List a) -> Pred (List a) -> Pred (List a)
-(~*) {a} p q l = {g, r : List a} -> Split g l r -> p r -> q g
+(~*) = Wand
 
 -- wand properites
 
 wandIntro : All (p ^*^ q :-> r) -> All (p :-> q ~* r)
-wandIntro f pl = \sp, qr => f $ MkStar pl sp qr
+wandIntro f pl = MkWand $ \sp, qr => f $ MkStar pl sp qr
 
 wandCancel0 : All (p :-> q ~* r) -> All (p ^*^ q :-> r)
-wandCancel0 f (MkStar pl sp qr) = f pl sp qr
+wandCancel0 f (MkStar pl sp qr) = app (f pl) sp qr
 
 wandCancel : All $ p ^*^ (p ~* q) :-> q
-wandCancel (MkStar pl sp wr) = wr (splitComm sp) pl
+wandCancel (MkStar pl sp wr) = app wr (splitComm sp) pl
 
 wandMono : All (p :-> q) -> All (r :-> s) -> All (q ~* r :-> p ~* s)
-wandMono pq rs wqr = \sp, pr => rs $ wqr sp (pq pr)
+wandMono pq rs wqr = MkWand $ \sp, pr => rs $ app wqr sp (pq pr)
 
 wandSelf : All $ Emp :-> p ~* p
-wandSelf MkEmp = \sp, pr => rewrite splitRInv sp in pr
+wandSelf MkEmp = MkWand $ \sp, pr => rewrite splitRInv sp in pr
 
 curryW : All $ (p ^*^ q) ~* r :-> p ~* (q ~* r)
-curryW wpq_r = \sp1, pm, sp2, qr =>
+curryW wpq_r =
+  MkWand $ \sp1, pm =>
+  MkWand $ \sp2, qr =>
   let (_ ** (sp3, sp4)) = splitAssoc sp1 sp2 in
-  wpq_r sp3 (MkStar pm sp4 qr)
+  app wpq_r sp3 (MkStar pm sp4 qr)
 
 uncurryW : All $ p ~* (q ~* r) :-> (p ^*^ q) ~* r
-uncurryW wpqr = \sp1, (MkStar pl sp2 qr) =>
+uncurryW wpqr = MkWand $ \sp1, (MkStar pl sp2 qr) =>
   let (_ ** (sp3, sp4)) = splitUnassoc sp1 sp2 in
-  wpqr sp3 pl sp4 qr
+  app (app wpqr sp3 pl) sp4 qr
 
 wandStar : All $ (p ~* q) ^*^ r :-> p ~* (q ^*^ r)
-wandStar (MkStar pql sp1 rr) = \sp2, pr =>
+wandStar (MkStar pql sp1 rr) = MkWand $ \sp2, pr =>
   let (_ ** (sp3, sp4)) = splitUnassoc (splitComm sp2) sp1 in
-  MkStar (pql (splitComm sp3) pr) sp4 rr
+  MkStar (app pql (splitComm sp3) pr) sp4 rr
 
 -- Inductive separating forall over a list
 data AllStar : {a, b : Type} -> (a -> Pred b) -> List a -> Pred b where
   Nil  : eps $ AllStar p []
   Cons : (p t ^*^ AllStar p ts) xs -> AllStar p (t::ts) xs
 
+singleton : All $ p x :-> AllStar {b=List a} p [x]
+singleton v = Cons $ MkStar v splitLeft Nil
+
 repartition : Split g l r -> All (AllStar p g :-> AllStar p l ^*^ AllStar p r)
-repartition  Nil        Nil      = MkStar Nil Nil Nil
+repartition  Nil        Nil                       = MkStar Nil Nil Nil
 repartition (ConsL sp) (Cons (MkStar pt sp1 pts)) =
   let
     MkStar xs sp2 ys = repartition sp pts
