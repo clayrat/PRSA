@@ -6,6 +6,9 @@ import Split
 %default total
 %access public export
 
+eps : Pred (List a) -> Type
+eps p = p []
+
 data Emp : Pred (List a) where
   MkEmp : Emp []
 
@@ -116,3 +119,9 @@ concat (MkStar  Nil                       sp ras) = rewrite splitRInv sp in ras
 concat (MkStar (Cons $ MkStar pt sp0 las) sp ras) =
   let (r ** (sp1, sp2)) = splitAssoc sp0 sp in
   Cons $ MkStar pt sp1 (concat $ MkStar las sp2 ras)
+
+-- dependent star
+
+data DStar : {a : Type} -> (p : Pred (List a)) -> ({t : List a} -> p t -> Pred (List a)) -> Pred (List a) where
+  MkDStar : {l, r : List a} -> {q : {t : List a} -> p t -> Pred (List a)} ->
+            (pl : p l) -> Split g l r -> q pl r -> DStar p q g

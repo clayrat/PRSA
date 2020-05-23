@@ -13,13 +13,13 @@ import LTy
 -- LTLC
 
 data Term : Ty -> Pred Ctx where
-  Var  : One a xs -> Term a xs
-  Lam  : ((a::) `turn` Term b) xs -> Term (a ~@ b) xs
-  App  : (Term (a ~@ b) ^*^ Term a) xs -> Term b xs
+  Var  : One a g -> Term a g
+  Lam  : ((a::) `turn` Term b) g -> Term (a ~@ b) g
+  App  : (Term (a ~@ b) ^*^ Term a) g -> Term b g
   TT   : eps $ Term U
-  LetT : (Term U ^*^ Term a) xs -> Term a xs
-  Pair : (Term a ^*^ Term b) xs -> Term (Prod a b) xs
-  LetP : (Term (Prod a b) ^*^ (([b,a]++) `turn` Term c)) xs -> Term c xs
+  LetT : (Term U ^*^ Term a) g -> Term a g
+  Pair : (Term a ^*^ Term b) g -> Term (Prod a b) g
+  LetP : (Term (Prod a b) ^*^ (([b,a]++) `turn` Term c)) g -> Term c g
 
 -- let (a,b) = (*,*) in let * = a in b
 test : Term U []
@@ -29,14 +29,17 @@ test = LetP $ MkStar (Pair $ MkStar TT Nil TT)
                                     (ConsR $ ConsL Nil)
                                     (Var MkOne))
 
+lets : All $ Term a :-> ((a::) `turn` Term b) ~* Term b
+lets t = MkWand $ \sp, u => App $ MkStar (Lam u) (splitComm sp) t
+
 mutual
   Env : Ctx -> Pred ST
   Env = AllStar Val
 
   data Val : Ty -> Pred ST where
     VT    : Val U []
-    VClos : Term b (a::g) -> Env g xs -> Val (a ~@ b) xs
-    VPair : (Val a ^*^ Val b) xs -> Val (Prod a b) xs
+    VClos : Term b (a::d) -> Env d g -> Val (a ~@ b) g
+    VPair : (Val a ^*^ Val b) g -> Val (Prod a b) g
 
 Reader : Ctx -> Ctx -> Pred ST -> Pred ST
 Reader g1 g2 p = Env g1 ~* Env g2 ^*^ p
@@ -90,8 +93,8 @@ eval {a} (Var MkOne)                = do Cons (MkStar v sp Nil) <- ask
                                            Refl => pure {p=Val a} v
 eval (Lam {a} {b} t)                = do env <- ask
                                          pure {p=Val (a ~@ b)} $ VClos t env
-eval (App (MkStar f sp t))          = do VClos {g} b env <- frame sp (eval f)
-                                         ve <- str {q=Env g} $ MkStar (eval t) splitRight env
+eval (App (MkStar f sp t))          = do VClos {d} b env <- frame sp (eval f)
+                                         ve <- str {q=Env d} $ MkStar (eval t) splitRight env
                                          MkEmp <- append $ Cons ve
                                          eval b
 eval  TT                            = pure {p=Val U} VT

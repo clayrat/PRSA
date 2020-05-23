@@ -20,8 +20,5 @@ data Union : Pred a -> Pred a -> Pred a where
 turn : (a -> b) -> Pred b -> Pred a
 turn f pb = pb . f
 
-eps : Pred (List a) -> Type
-eps p = p []
-
 data One : a -> Pred (List a) where
   MkOne : One x [x]
