@@ -4,12 +4,7 @@ import Data.List
 import Data.List.Quantifiers
 
 %default total
-%access public export
-
--- TODO exists in latest Idris
-indexAll : Elem x xs -> All p xs -> p x
-indexAll  Here     (p::_  ) = p
-indexAll (There e) ( _::ps) = indexAll e ps
+--%access public export
 
 data Ty = U | Imp Ty Ty
 
@@ -36,4 +31,4 @@ eval  TT       env = VT
 eval (Var el)  env = indexAll el env
 eval (Lam t)   env = VCl env t
 eval (App t u) env with (eval t env)
-  | VCl env' v = assert_total $ eval v (eval u env :: env')
+  eval (App t u) env | VCl env' v = assert_total $ eval v (eval u env :: env')

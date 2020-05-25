@@ -1,7 +1,7 @@
 module LTy
 
 %default total
-%access public export
+--%access public export
 
 data Ty = U
         | R Ty
