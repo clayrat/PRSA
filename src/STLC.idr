@@ -6,11 +6,6 @@ import Data.List.Quantifiers
 %default total
 %access public export
 
--- TODO exists in latest Idris
-indexAll : Elem x xs -> All p xs -> p x
-indexAll  Here     (p::_  ) = p
-indexAll (There e) ( _::ps) = indexAll e ps
-
 data Ty = U | Imp Ty Ty
 
 infixr 5 ~>
