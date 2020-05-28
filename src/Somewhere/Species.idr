@@ -5,10 +5,12 @@ module Somewhere.Species
 --%access public export
 %default total
 
+public export
 Sp : Type -> Type
 Sp a = List a -> Type
 
 infixr 1 :->
+public export
 (:->) : Sp a -> Sp a -> Type
 (:->) {a} s t = {x : List a} -> s x -> t x
 

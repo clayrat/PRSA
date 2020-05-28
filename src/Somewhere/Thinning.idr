@@ -6,6 +6,7 @@ import Data.List
 %default total
 
 -- thinning aka order-preserving embedding
+public export
 data Thin : List a -> List a -> Type where
   Nil  : Thin [] []
   Skip : Thin xs ys -> Thin xs      (a::ys)
@@ -19,10 +20,12 @@ skipsInv : (snx : Thin [] xs) -> snx = skips {xs}
 skipsInv  Nil     = Refl
 skipsInv (Skip s) = cong Skip $ skipsInv s
 
+export
 I : (xs : List a) -> Thin xs xs
 I [] = Nil
 I (x::xs) = Take $ I xs
 
+export
 compThin : Thin xs ys -> Thin ys zs -> Thin xs zs
 compThin  txy       (Skip tyz) = Skip $ compThin txy tyz
 compThin (Skip txy) (Take tyz) = Skip $ compThin txy tyz
@@ -178,11 +181,11 @@ uniqueCoherence (Refl ** Refl) (Refl ** Refl) = Refl
 --  equiv : splitCoherence wxs twxyz as thin1 bs thin2
 
 data Splitting : (wxs : List a) -> (ys : List a) -> (zs : List a) -> (twxyz : Thin wxs (ys ++ zs)) -> Type where
-    MkSplitting : {as, bs : List a}
-               -> (thin1 : Thin as ys)
-               -> (thin2 : Thin bs zs)
-               -> (equiv : splitCoherence wxs twxyz as thin1 bs thin2)
-               -> Splitting wxs ys zs twxyz
+  MkSplitting : {as, bs : List a}
+             -> (thin1 : Thin as ys)
+             -> (thin2 : Thin bs zs)
+             -> (equiv : splitCoherence wxs twxyz as thin1 bs thin2)
+             -> Splitting wxs ys zs twxyz
 
 alreadySplit : {ws, xs : List a} -> (twy : Thin ws ys) -> (txz : Thin xs zs) -> Splitting (ws ++ xs) ys zs (thinAppend twy txz)
 alreadySplit twy txz =  MkSplitting twy txz (Refl ** Refl)
@@ -195,3 +198,63 @@ splitThin (y::ys) (Skip twxyz) =
 splitThin (y::ys) (Take twxyz) =
   let MkSplitting th1 th2 (Refl ** eqv) = splitThin ys twxyz in
   MkSplitting (Take th1) th2 (Refl ** cong Take eqv)
+
+data STri : Thin ws ys -> Thin xs zs -> Thin wxs (ys ++ zs) -> Type where
+  NilST  : STri Nil txz txz
+  SkipST : STri twy txz twxyz -> STri (Skip twy) txz (Skip twxyz)
+  TakeST : STri twy txz twxyz -> STri (Take twy) txz (Take twxyz)
+
+striUnique : {twy : Thin ws ys} -> {txz : Thin xs zs} -> {twxyz : Thin wxs (ys ++ zs)}
+          -> (tr1,  tr2 : STri twy txz twxyz) -> tr1 = tr2
+striUnique  NilST        NilST       = Refl
+striUnique (SkipST tr1) (SkipST tr2) = cong SkipST $ striUnique tr1 tr2
+striUnique (TakeST tr1) (TakeST tr2) = cong TakeST $ striUnique tr1 tr2
+
+iso1 : {twy : Thin ws ys} -> {txz : Thin xs zs} -> {twxyz : Thin wxs (ys ++ zs)}
+    -> STri twy txz twxyz -> splitCoherence wxs twxyz ws twy xs txz
+iso1  NilST      = (Refl ** Refl)
+iso1 (SkipST tr) = case iso1 tr of
+  (Refl ** Refl) => (Refl ** Refl)
+iso1 (TakeST tr) = case iso1 tr of
+  (Refl ** Refl) => (Refl ** Refl)
+
+iso2 : {twy : Thin ws ys} -> {txz : Thin xs zs} -> {twxyz : Thin wxs (ys ++ zs)}
+    -> splitCoherence wxs twxyz ws twy xs txz -> STri twy txz twxyz
+iso2 {twy=Nil}      (Refl ** Refl) = NilST
+iso2 {twy=Skip twy} (Refl ** Refl) = SkipST $ iso2 (Refl ** Refl)
+iso2 {twy=Take twy} (Refl ** Refl) = TakeST $ iso2 (Refl ** Refl)
+
+-- again, with record:
+--
+-- Can't solve constraint between:
+--         ?type_of_twxys [no locals in scope]
+-- and
+--         Thin ?wxs (ys ++ zs)
+
+data SplittingTri : (wxs : List a) -> (ys : List a) -> (zs : List a) -> (twxyz : Thin wxs (ys ++ zs)) -> Type where
+  MkSplittingTri : {as, bs : List a}
+               -> (thin1 : Thin as ys)
+               -> (thin2 : Thin bs zs)
+               -> (equiv : STri thin1 thin2 twxyz)
+               -> SplittingTri wxs ys zs twxyz
+
+splittingTriInj : MkSplittingTri t11 t12 e1 = MkSplittingTri t21 t22 e2 -> (t11 = t21, t12 = t22)
+splittingTriInj Refl = (Refl, Refl)
+
+-- TODO coverage checker is not happy
+partial
+splitTriUnique : (twxyz : Thin wxs (ys ++ zs)) -> (s1, s2 : SplittingTri wxs ys zs twxyz) -> s1 = s2
+splitTriUnique  t12         (MkSplittingTri  Nil       t12  NilST)       (MkSplittingTri  Nil       t12  NilST)       = Refl
+splitTriUnique (Skip twxyz) (MkSplittingTri (Skip t11) t12 (SkipST st1)) (MkSplittingTri (Skip t21) t22 (SkipST st2)) =
+  case splitTriUnique twxyz (MkSplittingTri t11 t12 st1) (MkSplittingTri t21 t22 st2) of
+    Refl => Refl
+splitTriUnique (Take twxyz) (MkSplittingTri (Take t11) t12 (TakeST st1)) (MkSplittingTri (Take t21) t22 (TakeST st2)) =
+  case splitTriUnique twxyz (MkSplittingTri t11 t12 st1) (MkSplittingTri t21 t22 st2) of
+    Refl => Refl
+
+splitUnique : (twxyz : Thin wxs (ys ++ zs)) -> (s1, s2 : Splitting wxs ys zs twxyz) -> s1 = s2
+splitUnique twxyz (MkSplitting t11 t12 co1) (MkSplitting t21 t22 co2) =
+  believe_me {a=MkSplitting t11 t12 co1 = MkSplitting t11 t12 co1} Refl
+--  case assert_total $ splitTriUnique twxyz (MkSplittingTri t11 t12 (iso2 co1)) (MkSplittingTri t21 t22 (iso2 co2)) of
+--    prf => let (prf1, prf2) = splittingTriInj prf in
+--           ?wat
