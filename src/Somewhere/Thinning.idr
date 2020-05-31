@@ -9,8 +9,8 @@ import Data.List
 public export
 data Thin : List a -> List a -> Type where
   Nil  : Thin [] []
-  Skip : Thin xs ys -> Thin xs      (a::ys)
-  Take : Thin xs ys -> Thin (a::xs) (a::ys)
+  Skip : {y : a} -> Thin xs ys -> Thin xs      (y::ys)
+  Take : {y : a} -> Thin xs ys -> Thin (y::xs) (y::ys)
 
 skips : {xs : List a} -> Thin [] xs
 skips {xs=[]}   = Nil
@@ -77,7 +77,7 @@ Uninhabited (Thin (x::xs) xs) where
 
 antiSym : bij xs ys -> xs = ys
 antiSym (Nil, tyx) = Refl
-antiSym (Take {a} txy, Take tyx) = cong (a ::) $ antiSym (txy, tyx)
+antiSym (Take {y} txy, Take tyx) = cong (y ::) $ antiSym (txy, tyx)
 antiSym (Skip txy, tyx) = absurd $ compThin tyx txy
 antiSym (txy, Skip tyx) = absurd $ compThin txy tyx
 
@@ -88,8 +88,8 @@ thin (Take s) = cong Take $ thin s
 
 data CompGraph : Thin xs ys -> Thin ys zs -> Thin xs zs -> Type where
   NilG  : CompGraph Nil Nil Nil
-  SkipR : CompGraph txy tyz txz -> CompGraph (Skip txy) (Take tyz) (Skip txz)
-  SkipL : CompGraph txy tyz txz -> CompGraph       txy  (Skip tyz) (Skip txz)
+  SkipL : CompGraph txy tyz txz -> CompGraph (Skip txy) (Take tyz) (Skip txz)
+  SkipR : CompGraph txy tyz txz -> CompGraph       txy  (Skip tyz) (Skip txz)
   Take2 : CompGraph txy tyz txz -> CompGraph (Take txy) (Take tyz) (Take txz)
 
 Uninhabited (CompGraph txy (Skip tyz) (Take txz)) where
@@ -101,20 +101,20 @@ Uninhabited (CompGraph (Take txy) (Take tyz) (Skip txz)) where
 lemma1 : (txy : Thin xs ys) -> (tyz : Thin ys zs) -> (txz : Thin xs zs)
        -> compThin txy tyz = txz -> CompGraph txy tyz txz
 lemma1  Nil        Nil        Nil                     Refl = NilG
-lemma1 (Skip txy) (Take tyz) (Skip (compThin txy tyz)) Refl = SkipR $ lemma1 txy tyz (compThin txy tyz) Refl
-lemma1  txy       (Skip tyz) (Skip (compThin txy tyz)) Refl = SkipL $ lemma1 txy tyz (compThin txy tyz) Refl
+lemma1 (Skip txy) (Take tyz) (Skip (compThin txy tyz)) Refl = SkipL $ lemma1 txy tyz (compThin txy tyz) Refl
+lemma1  txy       (Skip tyz) (Skip (compThin txy tyz)) Refl = SkipR $ lemma1 txy tyz (compThin txy tyz) Refl
 lemma1 (Take txy) (Take tyz) (Take (compThin txy tyz)) Refl = Take2 $ lemma1 txy tyz (compThin txy tyz) Refl
 
 lemma2 : CompGraph txy tyz txz -> compThin txy tyz = txz
 lemma2  NilG      = Refl
-lemma2 (SkipR cg) = cong Skip $ lemma2 cg
 lemma2 (SkipL cg) = cong Skip $ lemma2 cg
+lemma2 (SkipR cg) = cong Skip $ lemma2 cg
 lemma2 (Take2 cg) = cong Take $ lemma2 cg
 
 lemma3 : (cg1, cg2 : CompGraph txy tyz txz) -> cg1 = cg2
 lemma3  NilG       NilG       = Refl
-lemma3 (SkipR cg) (SkipR cg2) = cong SkipR $ lemma3 cg cg2
 lemma3 (SkipL cg) (SkipL cg2) = cong SkipL $ lemma3 cg cg2
+lemma3 (SkipR cg) (SkipR cg2) = cong SkipR $ lemma3 cg cg2
 lemma3 (Take2 cg) (Take2 cg2) = cong Take2 $ lemma3 cg cg2
 
 squareSym : {twx : Thin ws xs}
@@ -130,8 +130,8 @@ triId = lemma1 txy tyz (compThin txy tyz) Refl
 injective : (txy1, txy2 : Thin xs ys) -> (tyz : Thin ys zs)
          -> CompGraph txy1 tyz (compThin txy2 tyz) -> txy1 = txy2
 injective  Nil         Nil         Nil        NilG      = Refl
-injective (Skip txy1) (Skip txy2) (Take tyz) (SkipR cg) = cong Skip $ injective txy1 txy2 tyz cg
-injective  txy1        txy2       (Skip tyz) (SkipL cg) = injective txy1 txy2 tyz cg
+injective (Skip txy1) (Skip txy2) (Take tyz) (SkipL cg) = cong Skip $ injective txy1 txy2 tyz cg
+injective  txy1        txy2       (Skip tyz) (SkipR cg) = injective txy1 txy2 tyz cg
 injective (Take txy1) (Take txy2) (Take tyz) (Take2 cg) = cong Take $ injective txy1 txy2 tyz cg
 
 noCoproducts : (y : a) -> (xs : List a)
