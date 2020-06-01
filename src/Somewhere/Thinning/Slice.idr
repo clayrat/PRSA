@@ -9,6 +9,7 @@ infixr 1 :->/
 (:->/) : {xs, ys : List a} -> Thin xs zs -> Thin ys zs -> Type
 (:->/) txz tyz = (txy : Thin xs ys ** CompGraph txy tyz txz)
 
+public export
 data Cover : Bool -> Thin xs xys -> Thin ys xys -> Type where
   NilC   : Cover b    Nil Nil
   Take1C : Cover b    tx ty -> Cover b    (Take tx) (Skip ty)
@@ -44,6 +45,7 @@ coverUnique (TakesC c1) (TakesC c2) = cong TakesC $ coverUnique c1 c2
 --  cover : Cover True txs tys
 --  factor2 : CompGraph tys thinning tyz
 
+public export
 data Coproduct : Thin xs zs -> Thin ys zs -> Type where
   MkCoproduct :
       {support : List a}
@@ -55,6 +57,7 @@ data Coproduct : Thin xs zs -> Thin ys zs -> Type where
    -> (factor2 : CompGraph tys thinning tyz)
    -> Coproduct txz tyz
 
+export
 coproduct : {zs : List a} -> (txz : Thin xs zs) -> (tyz : Thin ys zs) -> Coproduct txz tyz
 coproduct  Nil        Nil       = MkCoproduct NilG NilC NilG
 coproduct (Skip txz) (Skip tyz) = case coproduct txz tyz of
@@ -113,6 +116,7 @@ pull (TakesC c) (Skip tz)     = pull c tz
 pull (TakesC c) (Take {y} tz) = case pull c tz of
   (xs1 ** ys1 ** tx1 ** ty1 ** c1) => (y::xs1 ** y::ys1 ** Take tx1 ** Take ty1 ** TakesC c1)
 
+export
 coproductUnique : {tx : Thin xs zs} -> {ty : Thin ys zs}
                -> (c1, c2 : Coproduct tx ty) -> c1 = c2
 coproductUnique (MkCoproduct  NilG        NilC        NilG      ) (MkCoproduct  NilG        NilC        NilG)       = Refl

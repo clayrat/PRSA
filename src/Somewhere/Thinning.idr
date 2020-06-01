@@ -12,6 +12,7 @@ data Thin : List a -> List a -> Type where
   Skip : {y : a} -> Thin xs ys -> Thin xs      (y::ys)
   Take : {y : a} -> Thin xs ys -> Thin (y::xs) (y::ys)
 
+export
 skips : {xs : List a} -> Thin [] xs
 skips {xs=[]}   = Nil
 skips {xs=_::_} = Skip skips
@@ -30,7 +31,7 @@ compThin : Thin xs ys -> Thin ys zs -> Thin xs zs
 compThin  txy       (Skip tyz) = Skip $ compThin txy tyz
 compThin (Skip txy) (Take tyz) = Skip $ compThin txy tyz
 compThin (Take txy) (Take tyz) = Take $ compThin txy tyz
-compThin  Nil       Nil      = Nil
+compThin  Nil        Nil       = Nil
 
 idComp : (s : Thin xs ys) -> compThin (I xs) s = s
 idComp  Nil     = Refl
@@ -86,6 +87,7 @@ thin  Nil     = Refl
 thin (Skip s) = absurd s
 thin (Take s) = cong Take $ thin s
 
+public export
 data CompGraph : Thin xs ys -> Thin ys zs -> Thin xs zs -> Type where
   NilG  : CompGraph Nil Nil Nil
   SkipL : CompGraph txy tyz txz -> CompGraph (Skip txy) (Take tyz) (Skip txz)
@@ -105,6 +107,7 @@ lemma1 (Skip txy) (Take tyz) (Skip (compThin txy tyz)) Refl = SkipL $ lemma1 txy
 lemma1  txy       (Skip tyz) (Skip (compThin txy tyz)) Refl = SkipR $ lemma1 txy tyz (compThin txy tyz) Refl
 lemma1 (Take txy) (Take tyz) (Take (compThin txy tyz)) Refl = Take2 $ lemma1 txy tyz (compThin txy tyz) Refl
 
+export
 lemma2 : CompGraph txy tyz txz -> compThin txy tyz = txz
 lemma2  NilG      = Refl
 lemma2 (SkipL cg) = cong Skip $ lemma2 cg
@@ -124,6 +127,7 @@ squareSym : {twx : Thin ws xs}
          -> CompGraph twx txz (compThin twy tyz) -> CompGraph twy tyz (compThin twx txz)
 squareSym cg = lemma1 twy tyz (compThin twx txz) $ sym $ lemma2 cg
 
+export
 triId : {txy : Thin xs ys} -> {tyz : Thin ys zs} -> CompGraph txy tyz (compThin txy tyz)
 triId = lemma1 txy tyz (compThin txy tyz) Refl
 
@@ -148,11 +152,13 @@ noCoproducts x (x::xs) i1  i2       (Take t1)  (Skip t2)         cg11 cg21 cg12 
 noCoproducts x [x]     i1 (Skip i2) (Take Nil) (Take (Skip Nil)) cg11 cg21 cg12 cg22 = absurd i2
 noCoproducts x [x]     i1 (Take i2) (Take Nil) (Take (Skip Nil)) cg11 cg21 cg12 cg22 = absurd cg22
 
+export
 thinAppend : Thin ws ys -> Thin xs zs -> Thin (ws ++ xs) (ys ++ zs)
 thinAppend  Nil       txz = txz
 thinAppend (Skip twy) txz = Skip $ thinAppend twy txz
 thinAppend (Take twy) txz = Take $ thinAppend twy txz
 
+public export
 splitCoherence : (wxs : List a) -> Thin wxs (ys ++ zs)
                -> (ws : List a) -> Thin ws   ys
                -> (xs : List a) -> Thin xs   zs
@@ -180,6 +186,7 @@ uniqueCoherence (Refl ** Refl) (Refl ** Refl) = Refl
 --  thin2 : Thin bs zs
 --  equiv : splitCoherence wxs twxyz as thin1 bs thin2
 
+public export
 data Splitting : (wxs : List a) -> (ys : List a) -> (zs : List a) -> (twxyz : Thin wxs (ys ++ zs)) -> Type where
   MkSplitting : {as, bs : List a}
              -> (thin1 : Thin as ys)
@@ -187,9 +194,11 @@ data Splitting : (wxs : List a) -> (ys : List a) -> (zs : List a) -> (twxyz : Th
              -> (equiv : splitCoherence wxs twxyz as thin1 bs thin2)
              -> Splitting wxs ys zs twxyz
 
+public export
 alreadySplit : {ws, xs : List a} -> (twy : Thin ws ys) -> (txz : Thin xs zs) -> Splitting (ws ++ xs) ys zs (thinAppend twy txz)
 alreadySplit twy txz =  MkSplitting twy txz (Refl ** Refl)
 
+export
 splitThin : {wxs : List a} -> (ys : List a) -> (twxyz : Thin wxs (ys ++ zs)) -> Splitting wxs ys zs twxyz
 splitThin []       twxyz       = MkSplitting Nil twxyz (Refl ** Refl)
 splitThin (y::ys) (Skip twxyz) =
@@ -252,6 +261,7 @@ splitTriUnique (Take twxyz) (MkSplittingTri (Take t11) t12 (TakeST st1)) (MkSpli
   case splitTriUnique twxyz (MkSplittingTri t11 t12 st1) (MkSplittingTri t21 t22 st2) of
     Refl => Refl
 
+export
 splitUnique : (twxyz : Thin wxs (ys ++ zs)) -> (s1, s2 : Splitting wxs ys zs twxyz) -> s1 = s2
 splitUnique twxyz (MkSplitting t11 t12 co1) (MkSplitting t21 t22 co2) =
   believe_me {a=MkSplitting t11 t12 co1 = MkSplitting t11 t12 co1} Refl

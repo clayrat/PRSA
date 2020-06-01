@@ -14,9 +14,11 @@ public export
 (:->) : Sp a -> Sp a -> Type
 (:->) {a} s t = {x : List a} -> s x -> t x
 
+public export
 data Var : (x : a) -> Sp a where
   MkVar : Var x [x]
 
+public export
 data Cx : List a -> Sp a where
   MkCx : Cx xs xs
 
@@ -24,6 +26,7 @@ Ens : Sp a
 Ens xs = ()
 
 infixr 2 :*:
+public export
 (:*:) : Sp a -> Sp a -> Sp a
 (:*:) s t x = (s x, t x)
 
@@ -59,6 +62,7 @@ parameters (op : List a -> List a -> List a)
                                     rewrite sym $ lid r in
                                     tr
 
+  public export
   Hom : Sp a -> Sp a -> Sp a
   Hom s t l = {r, g : List a} -> op l r = g -> s r -> t g
 
