@@ -17,12 +17,8 @@ data Cover : Bool -> Thin xs xys -> Thin ys xys -> Type where
   TakesC : Cover True tx ty -> Cover True (Take tx) (Take ty)
 
 -- TODO https://github.com/idris-lang/Idris2/issues/213
--- Can't bind implicit Somewhere.Thinning.Slice.{a:12030} of type {a:12023}[7]
---Uninhabited ({a : Type} -> {ys : List a} -> Cover b (Skip t1) (Skip t2)) where
---  uninhabited NilC impossible
-
-notSkipSkip : Not (Cover b (Skip t1) (Skip t2))
-notSkipSkip NilC impossible
+Uninhabited (Cover b (Skip {y} t1) (Skip t2)) where
+  uninhabited NilC impossible
 
 coverUnique : (c1, c2 : Cover b tx ty) -> c1 = c2
 coverUnique  NilC        NilC       = Refl
@@ -83,7 +79,7 @@ coproductUnversal :
   -> tyz :->/ twz
   -> txyz :->/ twz
 coproductUnversal  NilG              c   NilG       (Nil ** NilG)          (Nil ** NilG)          = (Nil ** NilG)
-coproductUnversal (SkipL t1)         c  (SkipL t2)   sl1                    sl2                   = void $ notSkipSkip c
+coproductUnversal (SkipL t1)         c  (SkipL t2)   sl1                    sl2                   = absurd c
 coproductUnversal (SkipR t1)         c  (SkipR t2)  (Skip txy1**SkipL cg1) (Skip txy2**SkipL cg2) =
   case coproductUnversal t1 c t2 (txy1**cg1) (txy2**cg2) of
     (txy ** cgxy) => (Skip txy ** SkipL cgxy)
