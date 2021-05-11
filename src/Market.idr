@@ -50,7 +50,7 @@ msplitRInv (Demand sp) = cong $ splitRInv sp
 msplitRInv (OfferR sp) = cong $ sym $ splitRInv sp
 
 data Supplier : (List a -> Pred (List a)) -> Pred (Market a) where
-  MkSupplier : p o d -> Split o d o1 -> Supplier p (Of o1)
+  MkSupplier : p o d -> Split o o1 d -> Supplier p (Of o1)
 
 data Consumer : Pred (List a) -> Pred (Market a) where
   MkConsumer : p d -> Consumer p (De d)

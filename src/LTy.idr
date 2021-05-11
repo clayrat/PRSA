@@ -4,7 +4,7 @@ module LTy
 --%access public export
 
 data Ty = U
-        | R Ty
+        | Rf Ty
         | Prod Ty Ty
         | Imp Ty Ty
 

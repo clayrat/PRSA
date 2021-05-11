@@ -17,6 +17,10 @@ All : Pred a -> Type
 All {a} p = {x : a} -> p x
 
 public export
+data Prod : Pred a -> Pred a -> Pred a where
+  MkProd : p x -> q x -> Prod p q x
+
+public export
 data Union : Pred a -> Pred a -> Pred a where
   Inj1 : All (p :-> Union p q)
   Inj2 : All (q :-> Union p q)
