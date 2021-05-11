@@ -12,6 +12,10 @@ eps p = p []
 data Emp : Pred (List a) where
   MkEmp : Emp []
 
+-- lists are partially ordered
+data LE : List a -> List a -> Type where
+  MkLE : {m : List a} -> Split r l m -> LE l r
+
 data Star : Pred (List a) -> Pred (List a) -> Pred (List a) where
   MkStar : {l, r : List a} -> p l -> Split g l r -> q r -> Star p q g
 
@@ -104,16 +108,16 @@ repartition  Nil        Nil                       = MkStar Nil Nil Nil
 repartition (ConsL sp) (Cons (MkStar pt sp1 pts)) =
   let
     MkStar xs sp2 ys = repartition sp pts
-    (lm ** (sp3, sp4)) = splitUnassoc sp1 sp2
+    (_ ** (sp3, sp4)) = splitUnassoc sp1 sp2
    in
-  MkStar (Cons $ MkStar {p} pt sp3 xs) sp4 ys --(Cons $ MkStar pt sp3 xs) sp4 ys
+  MkStar (Cons $ MkStar pt sp3 xs) sp4 ys
 repartition (ConsR sp) (Cons (MkStar pt sp1 pts)) =
   let
     MkStar xs sp2 ys = repartition sp pts
-    (_ ** (sp3, sp4)) = splitUnassoc sp1 (splitComm sp2)
+    (lm ** (sp3, sp4)) = splitUnassoc sp1 (splitComm sp2)
    in
-  ?wat2 --MkStar xs (splitComm sp4) (Cons $ MkStar pt sp3 ys)
-{-
+  MkStar xs (splitComm sp4) (Cons $ MkStar pt sp3 ys)
+
 concat : All $ AllStar p g1 ^*^ AllStar p g2 :-> AllStar p (g1 ++ g2)
 concat (MkStar  Nil                       sp ras) = rewrite splitRInv sp in ras
 concat (MkStar (Cons $ MkStar pt sp0 las) sp ras) =
@@ -125,4 +129,45 @@ concat (MkStar (Cons $ MkStar pt sp0 las) sp ras) =
 data DStar : {a : Type} -> (p : Pred (List a)) -> ({t : List a} -> p t -> Pred (List a)) -> Pred (List a) where
   MkDStar : {l, r : List a} -> {q : {t : List a} -> p t -> Pred (List a)} ->
             (pl : p l) -> Split g l r -> q pl r -> DStar p q g
-  -}
+
+-- septraction & sepcoimp from Bannister, Hofner, Klein, [2018] "Backwards and Forwards with Separation Logic"
+
+-- septraction
+
+data SepTr : Pred (List a) -> Pred (List a) -> Pred (List a) where
+  MkSepTr : {g, l : List a} -> p l -> Split g l r -> q g -> SepTr p q r
+
+infixr 8 ~@
+
+(~@) : Pred (List a) -> Pred (List a) -> Pred (List a)
+(~@) = SepTr
+
+-- separating coimplication
+
+data SepCoI : Pred (List a) -> Pred (List a) -> Pred (List a) where
+  MkSepCoI : ({l, r : List a} -> Split g l r -> p l -> q r) -> SepCoI p q g
+
+spp : SepCoI p q g -> {l, r : List a} -> Split g l r -> p l -> q r
+spp (MkSepCoI f) = f
+
+infixr 8 ~>*
+
+(~>*) : Pred (List a) -> Pred (List a) -> Pred (List a)
+(~>*) = SepCoI
+
+-- properties
+
+snakeIntro : All (p ~@ q :-> r) -> All (q :-> p ~>* r)
+snakeIntro f qg = MkSepCoI \sp, pl => f $ MkSepTr pl sp qg
+
+snakeElim : All (q :-> p ~>* r) -> All (p ~@ q :-> r)
+snakeElim f (MkSepTr pl sp qg) = spp (f qg) sp pl
+
+snakeCancel : All $ p ~@ (p ~>* q) :-> q
+snakeCancel (MkSepTr pl sp qg) = spp qg sp pl
+
+snakeMono : All (p :-> q) -> All (r :-> s) -> All (q ~>* r :-> p ~>* s)
+snakeMono pq rs sqr = MkSepCoI \sp, pl => rs $ spp sqr sp (pq pl)
+
+snakeProd : All $ (p ~>* q :-> p ^*^ r :-> p ^*^ Prod q r)
+snakeProd pq (MkStar pl sp rr) = MkStar pl sp (MkProd (spp pq sp pl) rr)
